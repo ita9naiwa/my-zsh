@@ -1,5 +1,7 @@
-# git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zsh}/.zprezto"
-ln -s $(pwd)/prezto "${ZDOTDIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zsh}/.zprezto"
+git submodule update --init --recursive
+curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+
+ln -s $(pwd)/prezto "${ZDOTDIR:-$HOME}/.zprezto"
 
 setopt EXTENDED_GLOB
 for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
@@ -14,5 +16,5 @@ echo "source $(pwd)/.zpreztorc" >> ~/.zpreztorc
 echo "source ~/my/shortcut.sh" >> ~/.zshrc
 
 
-
+export PATH=$HOME/miniconda3/bin:$PATH
 source ~/.zshrc
