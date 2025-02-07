@@ -1,0 +1,4 @@
+zstyle ':prezto:load' pmodule \
+    'terminal' \
+    'command-not-found' \
+    'autosuggestions'
