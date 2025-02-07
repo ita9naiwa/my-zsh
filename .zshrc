@@ -13,7 +13,7 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-fpath+=("$(brew --prefix)/share/zsh/site-functions")
+fpath+=("$(brew --prefix)/share/zsh/site-functions");
 # .zshrc
 
 autoload -U promptinit; promptinit
@@ -27,6 +27,10 @@ zstyle ':prompt:pure:prompt:*' color cyan
 zstyle :prompt:pure:git:stash show yes
 
 
+echo 'fpath+=("$(pwd)/pure")' >> ~/.zshrc
+echo "autoload -U promptinit" >> ~/.zshrc
+echo  "promptinit" >> ~/.zshrc
+echo "prompt pure" >> ~/.zshrc
 
 source $HOME/.atuin/bin/env
 #[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
