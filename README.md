@@ -8,17 +8,30 @@ macOS와 Linux에서 쓰는 작은 zsh 설정. zsh 5.9에서 검증했다.
 ```sh
 git clone https://github.com/ita9naiwa/my-zsh.git
 cd my-zsh
-zsh install.sh
-exec zsh
+bash install.sh
 ```
 
-기존 `.zshrc`는 `${ZDOTDIR:-$HOME}/.my-zsh-backup.*`에 백업한다.
-기존 설정도 계속 실행하려면 먼저 내용을 확인하고 `zsh install.sh --preserve-current`로 설치한다.
-이 옵션은 백업한 설정을 `.zshrc.local`에서 불러온다. 오래된 이 저장소의 자기 수정 `.zshrc`에는 사용하지 않는다.
-이미 설치한 상태에서 재실행하면 파일을 변경하지 않는다. 설치는 네트워크나 패키지 관리자를 실행하지 않는다.
+`bash install.sh` 한 번으로 zsh가 없으면 설치하고, 자동 제안·구문 강조 패키지,
+설정 링크, 기본 로그인 셸 변경(`chsh`)까지 처리한다. 터미널에서 실행하면 마지막에 zsh로 들어간다.
+Homebrew, apt-get, dnf, pacman, apk를 지원한다. 패키지 관리자나 필요한 패키지가 없으면 명시적으로 실패한다.
+권한이 필요하면 `sudo`/`chsh`가 비밀번호를 요청할 수 있다. 스크립트 전체를 sudo로 실행하지 않는다.
+
+기존 `.zshrc`는 `${ZDOTDIR:-$HOME}/.my-zsh-backup.*`에 백업하고 기본적으로
+`.zshrc.local`에서 계속 읽는다. 예전 이 저장소처럼 자기 자신을 수정하는 설정은
+`--no-preserve-current`로 설치한다. 이미 연결돼 있어도 누락된 패키지·로그인 셸 설정은 계속 확인한다.
+
+```sh
+# 관리형 서버: 기본 셸을 변경하지 않고 설치만 하기
+bash install.sh --no-chsh --no-launch
+# 패키지가 미리 준비된 환경: 선택 플러그인 설치 생략
+bash install.sh --no-plugins --no-chsh --no-launch
+```
+
+`--no-plugins`도 zsh 자체가 없으면 설치한다. `/etc/shells`에 zsh가 등록되지 않은 호스트는
+관리자가 등록하거나 `--no-chsh`를 사용해야 한다. 새 셸을 실행해도 설치기를 호출한 부모 프로세스 자체는 바꾸지 않는다.
 
 `.zshrc`가 저장소를 가리키므로 설치 후 저장소 디렉터리를 이동하거나 삭제하지 않는다.
-다른 위치로 옮길 때는 `--preserve-current` 없이 다시 설치한다.
+다른 위치로 옮길 때는 `--no-preserve-current`로 다시 설치한다.
 `.zprofile`, `.zshenv`, `.zlogin`은 변경하지 않으며 이전 Prezto 설치에서 남은 설정은 별도로 확인한다.
 
 ## 구성
@@ -28,7 +41,7 @@ exec zsh
 | `.zshrc` | 공통 설정, 자동완성, 프롬프트, 선택 도구 연동 |
 | `shortcut.sh` | IREE CPU 컴파일 단축 명령 |
 | `.zshrc.local.example` | Conda·Cloud SDK·개인 빌드 경로 예시 |
-| `install.sh` | 기존 설정 백업 및 링크 설치 |
+| `install.sh` | Bash 기반 패키지 설치·설정 백업·링크·기본 셸 전환 |
 | `check.zsh` | 임시 HOME/ZDOTDIR에서 설치·기동 회귀 검사 |
 
 개인 설정은 `${ZDOTDIR:-$HOME}/.zshrc.local`에 둔다. 저장소에 자격 증명을 넣지 않는다.
@@ -42,6 +55,46 @@ exec zsh
 - **fzf 0.48 이상**: Ctrl-T 파일, Alt-C 디렉터리 선택. Atuin도 있으면 Ctrl-R은 Atuin이 담당한다.
 - **zoxide**: `z`/`zi`로 자주 쓰는 디렉터리 이동. 이전 zsh-z 데이터는 자동 변환하지 않는다.
 - **zsh-autosuggestions**: Homebrew의 `/opt/homebrew` 또는 `/usr/local` 설치 경로에 있으면 로드한다.
+
+## Bash 설정 상속
+
+`~/.bashrc`가 있으면 별도 Bash에서 읽고, 추가·변경된 일반 변수와 export 환경변수,
+간단한 alias만 현재 zsh에 가져온다. 공백·개행·달러 문자는 값 그대로 유지한다.
+Bash 함수·배열·프롬프트·히스토리·셸 내부 변수는 가져오지 않는다. `.bash_profile`은 별도로 읽지 않는다.
+`alias work='cd /some/path'`처럼 현재 디렉터리를 바꾸는 간단한 alias도 동작한다.
+Bash 전용 문법이 들어간 복잡한 alias는 zsh용으로 직접 바꿔야 한다.
+
+매번 현재 `.bashrc`를 실행하므로 그 파일의 초기화 비용과 부수 효과도 발생한다.
+상속을 끄려면 `.zshenv`에 `export MY_ZSH_IMPORT_BASH=0`을 넣는다.
+기존 `.zshrc.local`은 이후 읽으므로 기기별 zsh 설정이 우선한다.
+
+## 설치만 하면 쓰는 편의 기능
+
+`install.sh`가 두 플러그인을 설치한다. 이미 설치됐다면 재설치하지 않는다.
+
+과거 명령의 나머지가 회색으로 보이며 줄 끝에서 `→`로 수락한다.
+구문 강조는 없는 명령과 입력 구문을 색으로 구분한다.
+`ssh`처럼 명령 일부를 입력하고 `↑`/`↓`를 누르면 해당 접두어의 기록만 탐색한다.
+입력이 비어 있으면 전체 기록을 탐색한다. Shift/Ctrl/Option 방향키의 기존 이동 설정은 유지한다.
+
+## Wave Terminal
+
+`wave/settings.json`은 macOS용 추천 설정이다. 실제 설정 파일은
+`~/.config/waveterm/settings.json`이며 기존 값을 보존하면서 이 프리셋의 키를 병합한다.
+`install.sh`는 Wave 설정을 자동 변경하지 않는다. 이 Mac에는 백업 후 이미 병합했다.
+Wave UI에서 바꾼 값이 저장소를 수정하지 않도록 실제 파일은 심볼릭 링크로 연결하지 않았다.
+
+- `/bin/zsh` 로그인 셸을 사용해 이 저장소의 설정을 읽는다.
+- 글꼴 14px, 스크롤백 20,000줄, 깜빡이지 않는 커서, 소리 없는 벨 표시.
+- Option을 Meta로 사용해 단어 단위 이동/삭제가 가능하다.
+- 선택 즉시 복사, 복사 시 줄 끝 공백 제거, bracketed paste 활성화.
+- 앱/창 종료 확인을 켠다. 기존 테마와 AI 설정은 유지한다.
+
+Wave가 임시 `ZDOTDIR`을 쓰더라도 사용자 `.zshrc.local`, completion 캐시와 히스토리는
+원래 HOME에서 읽는다. 사용자 정의 ZDOTDIR은 Wave 임시 경로와 다를 때 그대로 존중한다.
+기존 Wave 셸 통합을 유지하므로 현재 디렉터리·명령 상태 추적도 계속 동작한다.
+새 터미널 블록에서 셸 설정이 적용된다. 개별 블록에 지정한 글꼴 등은 전역 설정보다 우선한다.
+설치된 Wave 0.14.5의 JSON 스키마와 실제 Wave zsh startup 파일로 검증했다.
 
 ## 변경 이유
 
@@ -60,7 +113,8 @@ zsh check.zsh
 
 검사는 새 설치, 공백 포함 ZDOTDIR, 기존 설정 보존, 중복 설치, 자동완성, Delete 키,
 설정 파일 자기 수정 방지, 깨진 심볼릭 링크와 잘못된 인수를 확인한다.
-선택 도구의 실제 UI와 Linux 기동은 별도 환경에서 확인해야 한다.
+자동 제안·구문 강조 로드, Wave 시작 경로, Bash 변수·alias 상속을 macOS에서 확인했다.
+누락된 zsh 설치 및 chsh 호출은 명령 대역으로 검사했으며 실제 Linux 패키지 설치는 수행하지 않았다. Wave 화면의 시각적 확인과 Linux 기동은 검증하지 않았다.
 
 복구할 때는 설치 출력의 백업 경로를 사용한다. **아래 `BACKUP`은 실제 경로로 바꾼다.**
 
@@ -72,7 +126,7 @@ BACKUP="$TARGET/.my-zsh-backup.실제접미사"
 cp -P "$BACKUP/.zshrc" "$TARGET/.zshrc"
 ```
 
-`--preserve-current`를 사용했다면 `.zshrc.local`에 추가된 `source .../previous.zsh` 줄도 지운다.
+기존 설정을 보존했다면 `.zshrc.local`에 추가된 `source .../previous.zsh` 줄도 지운다.
 기존 `.zshrc.local`이 있었다면 백업본으로 복원할 수 있다. 처음부터 `.zshrc`가 없었다면 링크 제거만 하면 된다.
 
 참고: [zsh completion](https://zsh.sourceforge.io/Doc/Release/Completion-System.html),
