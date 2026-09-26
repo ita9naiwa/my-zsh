@@ -1,9 +1,0 @@
-[submodule "pure"]
-	path = pure
-	url = https://github.com/sindresorhus/pure
-[submodule "prezto"]
-	path = prezto
-	url = https://github.com/sorin-ionescu/prezto
-[submodule "zsh-z"]
-	path = zsh-z
-	url = https://github.com/agkozak/zsh-z

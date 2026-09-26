@@ -1,0 +1,8 @@
+# Copy selected lines into ~/.zshrc.local; this file is never sourced automatically.
+# Keep credentials and host-specific paths out of the shared repository.
+
+# [[ -d /opt/homebrew/share/google-cloud-sdk/bin ]] && path=(/opt/homebrew/share/google-cloud-sdk/bin $path)
+# [[ -r $HOME/miniconda3/etc/profile.d/conda.sh ]] && source "$HOME/miniconda3/etc/profile.d/conda.sh"
+# [[ -d $HOME/src/llvm-project/build-llvm/bin ]] && path=("$HOME/src/llvm-project/build-llvm/bin" $path)
+# [[ -d $HOME/src/iree-build/tools ]] && path=("$HOME/src/iree-build/tools" $path)
+# export CC='ccache clang' CXX='ccache clang++'
