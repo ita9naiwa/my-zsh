@@ -43,6 +43,36 @@ exec zsh
 - **zoxide**: `z`/`zi`로 자주 쓰는 디렉터리 이동. 이전 zsh-z 데이터는 자동 변환하지 않는다.
 - **zsh-autosuggestions**: Homebrew의 `/opt/homebrew` 또는 `/usr/local` 설치 경로에 있으면 로드한다.
 
+## 설치만 하면 쓰는 편의 기능
+
+```sh
+brew install zsh-autosuggestions zsh-syntax-highlighting
+```
+
+과거 명령의 나머지가 회색으로 보이며 줄 끝에서 `→`로 수락한다.
+구문 강조는 없는 명령과 입력 구문을 색으로 구분한다.
+`ssh`처럼 명령 일부를 입력하고 `↑`/`↓`를 누르면 해당 접두어의 기록만 탐색한다.
+입력이 비어 있으면 전체 기록을 탐색한다. Shift/Ctrl/Option 방향키의 기존 이동 설정은 유지한다.
+
+## Wave Terminal
+
+`wave/settings.json`은 macOS용 추천 설정이다. 실제 설정 파일은
+`~/.config/waveterm/settings.json`이며 기존 값을 보존하면서 이 프리셋의 키를 병합한다.
+`install.sh`는 Wave 설정을 자동 변경하지 않는다. 이 Mac에는 백업 후 이미 병합했다.
+Wave UI에서 바꾼 값이 저장소를 수정하지 않도록 실제 파일은 심볼릭 링크로 연결하지 않았다.
+
+- `/bin/zsh` 로그인 셸을 사용해 이 저장소의 설정을 읽는다.
+- 글꼴 14px, 스크롤백 20,000줄, 깜빡이지 않는 커서, 소리 없는 벨 표시.
+- Option을 Meta로 사용해 단어 단위 이동/삭제가 가능하다.
+- 선택 즉시 복사, 복사 시 줄 끝 공백 제거, bracketed paste 활성화.
+- 앱/창 종료 확인을 켠다. 기존 테마와 AI 설정은 유지한다.
+
+Wave가 임시 `ZDOTDIR`을 쓰더라도 사용자 `.zshrc.local`, completion 캐시와 히스토리는
+원래 HOME에서 읽는다. 사용자 정의 ZDOTDIR은 Wave 임시 경로와 다를 때 그대로 존중한다.
+기존 Wave 셸 통합을 유지하므로 현재 디렉터리·명령 상태 추적도 계속 동작한다.
+새 터미널 블록에서 셸 설정이 적용된다. 개별 블록에 지정한 글꼴 등은 전역 설정보다 우선한다.
+설치된 Wave 0.14.5의 JSON 스키마와 실제 Wave zsh startup 파일로 검증했다.
+
 ## 변경 이유
 
 기존 `.zshrc`는 실행할 때마다 자신에게 Pure 설정 4줄을 덧붙였고, Atuin 환경도 두 번 읽었다.
@@ -60,7 +90,7 @@ zsh check.zsh
 
 검사는 새 설치, 공백 포함 ZDOTDIR, 기존 설정 보존, 중복 설치, 자동완성, Delete 키,
 설정 파일 자기 수정 방지, 깨진 심볼릭 링크와 잘못된 인수를 확인한다.
-선택 도구의 실제 UI와 Linux 기동은 별도 환경에서 확인해야 한다.
+자동 제안·구문 강조 로드 및 Wave 시작 경로를 macOS에서 확인했다. Wave 화면의 시각적 확인과 Linux 기동은 검증하지 않았다.
 
 복구할 때는 설치 출력의 백업 경로를 사용한다. **아래 `BACKUP`은 실제 경로로 바꾼다.**
 

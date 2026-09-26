@@ -18,12 +18,30 @@ zsh -dic '
   [[ -o sharehistory && -o interactivecomments ]] || exit 1
   (( $+functions[compdef] && $+functions[my_zsh_precmd] )) || exit 1
   [[ ${aliases[iree-cpu]} == iree-compile* ]] || exit 1
+  [[ $(bindkey "^[[A") == *history-beginning-search-backward* ]] || exit 1
+  [[ $(bindkey "^[[B") == *history-beginning-search-forward* ]] || exit 1
+  if [[ -r /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+    (( $+functions[_zsh_autosuggest_start] )) || exit 1
+  fi
+  if [[ -r /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+    (( $+functions[_zsh_highlight] )) || exit 1
+  fi
+  false
+  my_zsh_precmd || exit 1
   source "$ZDOTDIR/.zshrc"
   (( ${#precmd_functions[(r)my_zsh_precmd]} > 0 )) || exit 1
   [[ $(bindkey "^[[3~") == *delete-char* ]] || exit 1
 ' > "$tmp/out" 2> "$tmp/err"
 [[ ! -s "$tmp/err" ]] || { cat "$tmp/err"; exit 1; }
 [[ $(cksum "$repo/.zshrc") == "$before" ]]
+# Wave's temporary ZDOTDIR must not hide the user's local config/history.
+print 'export MY_ZSH_WAVE=yes' > "$HOME/.zshrc.local"
+# Load explicitly, as Wave does from its own startup file.
+WAVETERM_ZDOTDIR="$tmp/wave" ZDOTDIR="$tmp/wave" REPO="$repo" zsh -df -i -c '
+  source "$REPO/.zshrc"
+  [[ $MY_ZSH_WAVE == yes && $HISTFILE == "$HOME/.zsh_history" ]] || exit 1
+' 2> "$tmp/err"
+[[ ! -s "$tmp/err" ]] || { cat "$tmp/err"; exit 1; }
 # Empty home, broken symlink and invalid arguments must also be handled safely.
 export ZDOTDIR="$tmp/clean"
 zsh "$repo/install.sh"
@@ -36,4 +54,4 @@ zsh "$repo/install.sh"
 backups=("$ZDOTDIR"/.my-zsh-backup.*/.zshrc)
 [[ -L $backups[1] ]]
 if zsh "$repo/install.sh" --invalid 2>/dev/null; then exit 1; fi
-print 'PASS: fresh install, preservation, repeat install, startup, keys, no self-write, broken symlink'
+print 'PASS: fresh install, preservation, repeat install, startup, plugins, prefix keys, Wave ZDOTDIR, no self-write, broken symlink'

@@ -1,0 +1,15 @@
+{
+  "term:localshellpath": "/bin/zsh",
+  "term:localshellopts": ["-l"],
+  "term:fontsize": 14,
+  "term:scrollback": 20000,
+  "term:macoptionismeta": true,
+  "term:copyonselect": true,
+  "term:trimtrailingwhitespace": true,
+  "term:allowbracketedpaste": true,
+  "term:cursorblink": false,
+  "term:bellsound": false,
+  "term:bellindicator": true,
+  "app:confirmquit": true,
+  "window:confirmclose": true
+}
