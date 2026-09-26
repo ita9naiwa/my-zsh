@@ -3,12 +3,13 @@
 
 () {
   local repo_dir=$1
+  source "$repo_dir/bash-bridge.zsh"
   local prefix dir init map
   local config_dir=${ZDOTDIR:-$HOME}
   # Wave temporarily sets ZDOTDIR to its own shell-integration directory.
   [[ -n ${WAVETERM_ZDOTDIR:-} && $config_dir == "$WAVETERM_ZDOTDIR" ]] && config_dir=$HOME
   typeset -gU path fpath
-  for prefix in /opt/homebrew /usr/local; do
+  for prefix in /opt/homebrew /usr/local /usr; do
     [[ -d $prefix/share/zsh/site-functions ]] && fpath+=("$prefix/share/zsh/site-functions")
   done
   for dir in "$HOME/.local/bin" "$HOME/.atuin/bin"; do
@@ -49,6 +50,11 @@
   # Load environments before optional tools so their executables are discoverable.
   [[ -r $config_dir/.zshrc.local ]] && source "$config_dir/.zshrc.local"
 
+  # Bash's conda function cannot activate the parent zsh; use its native hook.
+  if (( ! $+functions[conda] )) && [[ -x ${CONDA_EXE:-} ]]; then
+    eval "$("$CONDA_EXE" shell.zsh hook)"
+  fi
+
   # fzf --zsh requires >= 0.48; older installations keep their own integration.
   if (( $+commands[fzf] )) && init=$(fzf --zsh 2>/dev/null); then
     eval "$init"
@@ -57,7 +63,7 @@
   # Keep Up-arrow navigation; Atuin owns Ctrl-R when both it and fzf exist.
   (( $+commands[atuin] )) && eval "$(atuin init zsh --disable-up-arrow)"
 
-  for prefix in /opt/homebrew /usr/local; do
+  for prefix in /opt/homebrew /usr/local /usr; do
     [[ -r $prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && {
       source "$prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
       break
@@ -73,7 +79,7 @@
     bindkey -M "$map" '^[OB' history-beginning-search-forward
   done
   # Load highlighting after all widgets and key bindings.
-  for prefix in /opt/homebrew /usr/local; do
+  for prefix in /opt/homebrew /usr/local /usr; do
     [[ -r $prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && {
       source "$prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
       break
