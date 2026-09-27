@@ -4,49 +4,45 @@
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 target_dir=${ZDOTDIR:-$HOME}
-preserve=1 change_shell=1 launch=1 plugins=1
+preserve=1 launch=1 plugins=1 build_zsh=0
+state_dir="$HOME/.local/share/my-zsh"
 for arg in "$@"; do
   case "$arg" in
     --preserve-current) preserve=1 ;;
     --no-preserve-current) preserve=0 ;;
-    --no-chsh) change_shell=0 ;;
+    --no-chsh) : ;; # Accepted for older installation commands.
+    --build-zsh) build_zsh=1 ;;
     --no-launch) launch=0 ;;
     --no-plugins) plugins=0 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
-as_root() {
-  if [[ $(id -u) == 0 ]]; then "$@"; else sudo -- "$@"; fi
-}
-install_packages() {
-  if command -v brew >/dev/null; then
-    brew install "$@"
-  elif command -v apt-get >/dev/null; then
-    as_root apt-get update
-    as_root apt-get install -y "$@"
-  elif command -v dnf >/dev/null; then
-    as_root dnf install -y "$@"
-  elif command -v pacman >/dev/null; then
-    as_root pacman -S --needed --noconfirm "$@"
-  elif command -v apk >/dev/null; then
-    as_root apk add "$@"
-  else
-    echo "No supported package manager. Install these packages, then rerun: $*" >&2
-    exit 1
-  fi
-}
-command -v zsh >/dev/null || install_packages zsh
-zsh_bin=$(command -v zsh)
+[[ $EUID != 0 ]] || { echo 'Run as your own account, not root.' >&2; exit 1; }
+mkdir -p "$state_dir"
+if (( build_zsh )) || { ! command -v zsh >/dev/null && [[ ! -x $state_dir/zsh-5.9.2/bin/zsh || ! -f $state_dir/zsh-5.9.2/.complete ]]; }; then
+  bash "$repo_dir/build-zsh.sh"
+fi
+if [[ -x $state_dir/zsh-5.9.2/bin/zsh && -f $state_dir/zsh-5.9.2/.complete ]]; then
+  zsh_bin="$state_dir/zsh-5.9.2/bin/zsh"
+else
+  zsh_bin=$(command -v zsh)
+fi
 if (( plugins )); then
-  packages=()
-  for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
-    found=0
-    for prefix in /opt/homebrew /usr/local /usr; do
-      [[ ! -r "$prefix/share/$plugin/$plugin.zsh" ]] || found=1
-    done
-    (( found )) || packages+=("$plugin")
+  command -v git >/dev/null || { echo 'git is required to download plugins; use --no-plugins for offline setup.' >&2; exit 1; }
+  for spec in zsh-autosuggestions:v0.7.1 zsh-syntax-highlighting:0.8.0; do
+    plugin=${spec%:*} tag=${spec#*:}
+    dest="$state_dir/plugins/$plugin"
+    if [[ ! -r $dest/$plugin.zsh ]]; then
+      [[ ! -e $dest ]] || { echo "Incomplete plugin directory: $dest" >&2; exit 1; }
+      mkdir -p "$state_dir/plugins"
+      staging=$(mktemp -d "$state_dir/plugins/.download.XXXXXXXX")
+      if ! git -c advice.detachedHead=false clone --depth 1 --branch "$tag" "https://github.com/zsh-users/$plugin.git" "$staging"; then
+        rm -rf -- "$staging"
+        exit 1
+      fi
+      mv "$staging" "$dest"
+    fi
   done
-  (( ${#packages[@]} == 0 )) || install_packages "${packages[@]}"
 fi
 mkdir -p "$target_dir"
 rc="$target_dir/.zshrc"
@@ -73,26 +69,26 @@ else
   echo "Installed: $rc -> $repo_dir/.zshrc"
   echo "Backup: $backup_dir"
 fi
-if (( change_shell )); then
-  current_shell=${SHELL:-}
-  if command -v dscl >/dev/null; then
-    current_shell=$(dscl . -read "/Users/$(id -un)" UserShell | awk '{print $2}')
-  elif command -v getent >/dev/null; then
-    current_shell=$(getent passwd "$(id -un)" | cut -d: -f7)
-  fi
-  if [[ $current_shell != "$zsh_bin" ]]; then
-    grep -Fxq "$zsh_bin" /etc/shells || {
-      echo "$zsh_bin is not in /etc/shells; ask your administrator to register it, or use --no-chsh." >&2
-      exit 1
-    }
-    chsh -s "$zsh_bin" || {
-      echo 'Configuration installed, but chsh failed. Rerun after resolving authentication, or use --no-chsh.' >&2
-      exit 1
-    }
+# An account-local launcher replaces changes to the OS login-shell database.
+mkdir -p "$HOME/.local/bin"
+launcher="$HOME/.local/bin/my-zsh"
+staging=$(mktemp "$HOME/.local/bin/.my-zsh.XXXXXXXX")
+{
+  printf '#!/usr/bin/env bash\n'
+  printf 'if [[ -z ${ZDOTDIR:-} ]]; then export ZDOTDIR=%q; fi\n' "$target_dir"
+  printf 'exec %q -l "$@"\n' "$zsh_bin"
+} > "$staging"
+chmod 755 "$staging"
+if [[ -e $launcher || -L $launcher ]]; then
+  if ! cmp -s "$staging" "$launcher"; then
+    launcher_backup=$(mktemp "$launcher.backup.XXXXXXXX")
+    cp -P "$launcher" "$launcher_backup"
+    echo "Launcher backup: $launcher_backup"
   fi
 fi
+mv -f "$staging" "$launcher"
 echo 'Setup complete. Bash constants and simple aliases are imported when .bashrc exists.'
 if (( launch )) && [[ -t 0 && -t 1 ]]; then
-  exec "$zsh_bin" -l
+  exec "$launcher"
 fi
-echo "Start the configured shell with: exec $zsh_bin -l"
+printf 'Start the configured shell with: %q\n' "$launcher"

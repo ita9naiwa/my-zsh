@@ -75,35 +75,29 @@ REPO="$repo" zsh -df -i -c '
   eval croot
   [[ $PWD == / ]] || exit 1
 ' > "$tmp/bridge.out" 2> "$tmp/bridge.err" || { cat "$tmp/bridge.err"; exit 1; }
-# Missing-zsh bootstrap and chsh are tested with local command doubles only.
+# Account-local launcher works, and forbidden administrative commands are never called.
 mock="$tmp/bin"
 mkdir -p "$mock"
-for tool in bash dirname mkdir cp mv chmod mktemp readlink awk cut ln; do
-  ln -s "$(command -v $tool)" "$mock/$tool"
+for tool in sudo chsh brew apt-get dnf pacman apk; do
+  cat > "$mock/$tool" <<'SH'
+#!/bin/sh
+printf 'FORBIDDEN\n' >> "$TEST_LOG"
+exit 99
+SH
+  chmod +x "$mock/$tool"
 done
-cat > "$mock/id" <<'SH'
-#!/bin/bash
-if [[ $1 == -u ]]; then echo 0; else echo testuser; fi
-SH
-cat > "$mock/apt-get" <<'SH'
-#!/bin/bash
-printf '%s\n' "$*" >> "$TEST_LOG"
-if [[ $1 == install ]]; then /bin/ln -s /bin/zsh "$TEST_BIN/zsh"; fi
-SH
-cat > "$mock/getent" <<'SH'
-#!/bin/bash
-echo 'testuser:x:1000:1000::/tmp:/bin/bash'
-SH
-cat > "$mock/grep" <<'SH'
-#!/bin/bash
-[[ $3 == /etc/shells ]]
-SH
-cat > "$mock/chsh" <<'SH'
-#!/bin/bash
-printf 'chsh %s\n' "$*" >> "$TEST_LOG"
-SH
-chmod +x "$mock"/{id,apt-get,getent,grep,chsh}
-TEST_LOG="$tmp/package.log" TEST_BIN="$mock" PATH="$mock" ZDOTDIR="$tmp/bootstrap" /bin/bash "$repo/install.sh" --no-launch --no-plugins
-[[ $(<"$tmp/package.log") == *'install -y zsh'* ]] || exit 1
-[[ $(<"$tmp/package.log") == *"chsh -s $mock/zsh"* ]] || exit 1
-print 'PASS: bootstrap/chsh mocks, install, plugins, Wave, Bash constants/environment/aliases/quoting'
+TEST_LOG="$tmp/admin.log" PATH="$mock:$PATH" ZDOTDIR="$tmp/account" bash "$repo/install.sh" --no-launch --no-plugins
+[[ ! -e $tmp/admin.log ]] || exit 1
+[[ -x $HOME/.local/bin/my-zsh ]] || exit 1
+ZDOTDIR="$tmp/account" "$HOME/.local/bin/my-zsh" -ic '(( $+functions[my_zsh_precmd] ))' 2> "$tmp/launcher.err"
+[[ ! -s "$tmp/launcher.err" ]] || { cat "$tmp/launcher.err"; exit 1; }
+# Local plugin files take priority over system installations.
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  mkdir -p "$HOME/.local/share/my-zsh/plugins/$plugin"
+  print "typeset -g MY_LOCAL_${plugin//-/_}=yes" > "$HOME/.local/share/my-zsh/plugins/$plugin/$plugin.zsh"
+done
+REPO="$repo" zsh -df -ic '
+  source "$REPO/.zshrc"
+  [[ $MY_LOCAL_zsh_autosuggestions == yes && $MY_LOCAL_zsh_syntax_highlighting == yes ]]
+'
+print 'PASS: user-only install/launcher, no admin commands, local plugins, Wave, Bash import'
