@@ -11,8 +11,15 @@ cd my-zsh
 bash install.sh
 ```
 
-**설치기는 현재 계정의 홈 디렉터리에만 설치한다.** `sudo`, 시스템 패키지 관리자,
-`chsh`, `/etc/shells` 변경을 사용하지 않는다. root 실행도 거부한다.
+**프로그램과 플러그인은 현재 계정의 홈에만 설치한다.** 시스템 패키지 설치나
+`/etc/shells` 수정은 하지 않으며 root 실행을 거부한다. 셸 활성화는 다음 순서로 처리한다.
+
+1. 계정의 기본 셸이 이미 선택한 zsh면 유지한다.
+2. 허용 목록에 있는 zsh라면 `sudo -n chsh`로 **본인 계정만** 변경을 시도한다.
+3. sudo가 없거나 비밀번호·권한이 필요하거나 변경이 실패하면 Bash 자동 전환을 설치한다.
+
+`sudo -n`은 비밀번호 입력을 기다리지 않는다. 결과를 `Shell activation:` 줄로 출력한다.
+실패 상세는 `~/.local/share/my-zsh/shell-change.log`에 남긴다.
 
 - 설정: `${ZDOTDIR:-$HOME}/.zshrc` → 이 저장소의 설정 파일
 - 플러그인: `~/.local/share/my-zsh/plugins/` (공식 릴리스 태그 고정)
@@ -22,8 +29,12 @@ bash install.sh
 
 이미 설치된 zsh는 그대로 사용하고, 자동 제안·구문 강조는 계정 전용 복사본을 설치한다.
 기존 Homebrew/시스템 패키지는 수정하거나 제거하지 않는다.
-터미널에서 설치하면 마지막에 새 zsh로 들어간다. 계정의 OS 로그인 셸은 바꾸지 않는다.
-이후 Bash 터미널/SSH 세션에서는 아래 명령으로 시작하거나, 터미널의 시작 명령에 실행기 경로를 지정한다.
+터미널에서 설치하면 마지막에 새 zsh로 들어간다.
+Bash 자동 전환은 `.bashrc`와 기존 로그인 설정(`.bash_profile` → `.bash_login` → `.profile` 중 첫 파일)에
+중복 없이 추가하고 원본을 백업한다. 로그인 설정이 없으면 `.bash_profile`을 만든다.
+대화형 TTY에서만 전환하므로 일반 SSH 명령·배치 작업에서는 실행하지 않는다.
+
+수동 시작도 가능하다.
 
 ```sh
 ~/.local/bin/my-zsh
@@ -35,7 +46,9 @@ bash install.sh
 옮긴 경우 `--no-preserve-current`로 다시 설치한다. 재설치는 동일한 링크와 플러그인을 유지한다.
 
 ```sh
-bash install.sh --no-launch                   # 설치만 하고 현재 셸 유지
+bash install.sh --no-launch                   # 설치/자동 활성화 후 현재 셸 유지
+bash install.sh --no-chsh                     # sudo 시도 없이 Bash 자동 전환
+bash install.sh --no-shell-setup --no-launch  # 시작 파일/계정 셸 설정 변경 생략
 bash install.sh --no-plugins --no-launch      # 플러그인 다운로드 생략
 bash install.sh --build-zsh --no-launch       # 기존 zsh와 별개로 계정 전용 zsh 빌드
 ```
@@ -45,7 +58,9 @@ zsh 소스 빌드에는 C 컴파일러, make, curl, xz 지원 tar, SHA-256 도�
 termcap/ncurses 개발 파일이 필요하다. 공식 소스의 고정 SHA-256을 검증한 뒤 빌드한다.
 빌드 도구가 없으면 설명과 함께 중단하며 시스템 패키지 설치로 우회하지 않는다.
 `--no-plugins`는 zsh가 없을 때의 소스 다운로드까지 끄지는 않는다.
-예전 `--no-chsh` 옵션은 호환 목적으로 받지만 아무 작업도 하지 않는다.
+자동 전환을 일시적으로 끄려면 `MY_ZSH_AUTOSTART=0 bash`를 사용한다.
+영구 해제는 Bash 시작 파일에 추가된 `# my-zsh` 블록과 그 다음 source 줄을 제거한다.
+이전에 직접 붙여넣은 `exec my-zsh` 블록이 있으면 그것도 별도로 제거해야 한다.
 
 ## 구성
 
@@ -72,14 +87,19 @@ termcap/ncurses 개발 파일이 필요하다. 공식 소스의 고정 SHA-256�
 
 ## Bash 설정 상속
 
-`~/.bashrc`가 있으면 별도 Bash에서 읽고, 추가·변경된 일반 변수와 export 환경변수,
+**Bash 재실행 상속은 기본으로 꺼져 있다.** 일부 클러스터 `.bashrc`가 재실행 중 멈추는 사례를 확인했다.
+이미 export된 환경변수는 셸 전환 시 정상적으로 유지된다.
+필요하면 `.zshenv`에 `export MY_ZSH_IMPORT_BASH=1`을 넣어 명시적으로 켠다.
+자동 전환 경로에서는 다시 실행하지 않도록 `MY_ZSH_IMPORT_BASH=0`을 설정한다.
+
+켜면 `~/.bashrc`를 별도 Bash에서 읽고, 추가·변경된 일반 변수와 export 환경변수,
 간단한 alias만 현재 zsh에 가져온다. 공백·개행·달러 문자는 값 그대로 유지한다.
 Bash 함수·배열·프롬프트·히스토리·셸 내부 변수는 가져오지 않는다. `.bash_profile`은 별도로 읽지 않는다.
 `alias work='cd /some/path'`처럼 현재 디렉터리를 바꾸는 간단한 alias도 동작한다.
 Bash 전용 문법이 들어간 복잡한 alias는 zsh용으로 직접 바꿔야 한다.
 
 매번 현재 `.bashrc`를 실행하므로 그 파일의 초기화 비용과 부수 효과도 발생한다.
-상속을 끄려면 `.zshenv`에 `export MY_ZSH_IMPORT_BASH=0`을 넣는다.
+함수나 비대화형 작업을 자동으로 zsh로 전환하지 않는다.
 기존 `.zshrc.local`은 이후 읽으므로 기기별 zsh 설정이 우선한다.
 
 ## 설치만 하면 쓰는 편의 기능
@@ -129,7 +149,8 @@ zsh check.zsh
 검사는 새 설치, 공백 포함 ZDOTDIR, 기존 설정 보존, 중복 설치, 자동완성, Delete 키,
 설정 파일 자기 수정 방지, 깨진 심볼릭 링크와 잘못된 인수를 확인한다.
 자동 제안·구문 강조 로드, Wave 시작 경로, Bash 변수·alias 상속을 macOS에서 확인했다.
-관리자 명령을 실행하지 않는지와 계정 전용 실행기·플러그인 우선순위를 검사한다.
+계정 전용 실행기·플러그인 우선순위, 비밀번호 없는 sudo 성공/거절/미설치,
+허용되지 않은 셸, 중복 방지와 비대화형 작업 보호를 검사한다. sudo/chsh는 테스트 대역으로만 실행한다.
 macOS 임시 HOME에서 zsh 5.9.2 공식 소스의 실제 빌드·설치·자동완성·실행기 기동도 확인했다.
 Wave 화면의 시각적 확인과 Linux 기동은 검증하지 않았다.
 

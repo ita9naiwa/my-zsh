@@ -4,13 +4,14 @@
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 target_dir=${ZDOTDIR:-$HOME}
-preserve=1 launch=1 plugins=1 build_zsh=0
+preserve=1 launch=1 plugins=1 build_zsh=0 shell_mode=auto
 state_dir="$HOME/.local/share/my-zsh"
 for arg in "$@"; do
   case "$arg" in
     --preserve-current) preserve=1 ;;
     --no-preserve-current) preserve=0 ;;
-    --no-chsh) : ;; # Accepted for older installation commands.
+    --no-chsh) shell_mode=bash ;;
+    --no-shell-setup) shell_mode=none ;;
     --build-zsh) build_zsh=1 ;;
     --no-launch) launch=0 ;;
     --no-plugins) plugins=0 ;;
@@ -87,7 +88,8 @@ if [[ -e $launcher || -L $launcher ]]; then
   fi
 fi
 mv -f "$staging" "$launcher"
-echo 'Setup complete. Bash constants and simple aliases are imported when .bashrc exists.'
+bash "$repo_dir/setup-shell.sh" "$zsh_bin" "$shell_mode"
+echo 'Setup complete. Bash re-import is opt-in (MY_ZSH_IMPORT_BASH=1).'
 if (( launch )) && [[ -t 0 && -t 1 ]]; then
   exec "$launcher"
 fi
