@@ -1,6 +1,6 @@
 # Import .bashrc scalar values and simple aliases; never import Bash functions.
-# Disable with MY_ZSH_IMPORT_BASH=0 in the environment or .zshenv.
-[[ ${MY_ZSH_IMPORT_BASH:-1} == 1 && -z ${MY_ZSH_BASH_BRIDGE:-} && -r $HOME/.bashrc ]] || return 0
+# Opt in with MY_ZSH_IMPORT_BASH=1; arbitrary .bashrc startup code can block.
+[[ ${MY_ZSH_IMPORT_BASH:-0} == 1 && -z ${MY_ZSH_BASH_BRIDGE:-} && -r $HOME/.bashrc ]] || return 0
 () {
   setopt localoptions extendedglob
   local _my_zsh_kind _my_zsh_name _my_zsh_value
