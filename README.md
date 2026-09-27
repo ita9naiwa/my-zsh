@@ -11,28 +11,41 @@ cd my-zsh
 bash install.sh
 ```
 
-`bash install.sh` 한 번으로 zsh가 없으면 설치하고, 자동 제안·구문 강조 패키지,
-설정 링크, 기본 로그인 셸 변경(`chsh`)까지 처리한다. 터미널에서 실행하면 마지막에 zsh로 들어간다.
-Homebrew, apt-get, dnf, pacman, apk를 지원한다. 패키지 관리자나 필요한 패키지가 없으면 명시적으로 실패한다.
-권한이 필요하면 `sudo`/`chsh`가 비밀번호를 요청할 수 있다. 스크립트 전체를 sudo로 실행하지 않는다.
+**설치기는 현재 계정의 홈 디렉터리에만 설치한다.** `sudo`, 시스템 패키지 관리자,
+`chsh`, `/etc/shells` 변경을 사용하지 않는다. root 실행도 거부한다.
 
-기존 `.zshrc`는 `${ZDOTDIR:-$HOME}/.my-zsh-backup.*`에 백업하고 기본적으로
-`.zshrc.local`에서 계속 읽는다. 예전 이 저장소처럼 자기 자신을 수정하는 설정은
-`--no-preserve-current`로 설치한다. 이미 연결돼 있어도 누락된 패키지·로그인 셸 설정은 계속 확인한다.
+- 설정: `${ZDOTDIR:-$HOME}/.zshrc` → 이 저장소의 설정 파일
+- 플러그인: `~/.local/share/my-zsh/plugins/` (공식 릴리스 태그 고정)
+- 실행기: `~/.local/bin/my-zsh`
+- zsh가 없을 때: `~/.local/share/my-zsh/zsh-5.9.2/`에 소스 빌드
+- 빌드 임시 파일: `~/.cache/my-zsh/` (종료 시 정리)
+
+이미 설치된 zsh는 그대로 사용하고, 자동 제안·구문 강조는 계정 전용 복사본을 설치한다.
+기존 Homebrew/시스템 패키지는 수정하거나 제거하지 않는다.
+터미널에서 설치하면 마지막에 새 zsh로 들어간다. 계정의 OS 로그인 셸은 바꾸지 않는다.
+이후 Bash 터미널/SSH 세션에서는 아래 명령으로 시작하거나, 터미널의 시작 명령에 실행기 경로를 지정한다.
 
 ```sh
-# 관리형 서버: 기본 셸을 변경하지 않고 설치만 하기
-bash install.sh --no-chsh --no-launch
-# 패키지가 미리 준비된 환경: 선택 플러그인 설치 생략
-bash install.sh --no-plugins --no-chsh --no-launch
+~/.local/bin/my-zsh
 ```
 
-`--no-plugins`도 zsh 자체가 없으면 설치한다. `/etc/shells`에 zsh가 등록되지 않은 호스트는
-관리자가 등록하거나 `--no-chsh`를 사용해야 한다. 새 셸을 실행해도 설치기를 호출한 부모 프로세스 자체는 바꾸지 않는다.
+기존 `.zshrc`는 `.my-zsh-backup.*`에 백업하고 `.zshrc.local`에서 계속 읽는다.
+기존 설정을 이어 읽지 않으려면 `--no-preserve-current`를 사용한다.
+설치 후 저장소를 이동/삭제하면 링크가 끊어지므로 위치를 유지한다.
+옮긴 경우 `--no-preserve-current`로 다시 설치한다. 재설치는 동일한 링크와 플러그인을 유지한다.
 
-`.zshrc`가 저장소를 가리키므로 설치 후 저장소 디렉터리를 이동하거나 삭제하지 않는다.
-다른 위치로 옮길 때는 `--no-preserve-current`로 다시 설치한다.
-`.zprofile`, `.zshenv`, `.zlogin`은 변경하지 않으며 이전 Prezto 설치에서 남은 설정은 별도로 확인한다.
+```sh
+bash install.sh --no-launch                   # 설치만 하고 현재 셸 유지
+bash install.sh --no-plugins --no-launch      # 플러그인 다운로드 생략
+bash install.sh --build-zsh --no-launch       # 기존 zsh와 별개로 계정 전용 zsh 빌드
+```
+
+플러그인 다운로드에는 git과 네트워크가 필요하다.
+zsh 소스 빌드에는 C 컴파일러, make, curl, xz 지원 tar, SHA-256 도구와
+termcap/ncurses 개발 파일이 필요하다. 공식 소스의 고정 SHA-256을 검증한 뒤 빌드한다.
+빌드 도구가 없으면 설명과 함께 중단하며 시스템 패키지 설치로 우회하지 않는다.
+`--no-plugins`는 zsh가 없을 때의 소스 다운로드까지 끄지는 않는다.
+예전 `--no-chsh` 옵션은 호환 목적으로 받지만 아무 작업도 하지 않는다.
 
 ## 구성
 
@@ -41,7 +54,8 @@ bash install.sh --no-plugins --no-chsh --no-launch
 | `.zshrc` | 공통 설정, 자동완성, 프롬프트, 선택 도구 연동 |
 | `shortcut.sh` | IREE CPU 컴파일 단축 명령 |
 | `.zshrc.local.example` | Conda·Cloud SDK·개인 빌드 경로 예시 |
-| `install.sh` | Bash 기반 패키지 설치·설정 백업·링크·기본 셸 전환 |
+| `install.sh` | 계정 전용 플러그인·설정·실행기 설치 |
+| `build-zsh.sh` | zsh가 없을 때 홈 디렉터리에 검증된 소스 빌드 |
 | `check.zsh` | 임시 HOME/ZDOTDIR에서 설치·기동 회귀 검사 |
 
 개인 설정은 `${ZDOTDIR:-$HOME}/.zshrc.local`에 둔다. 저장소에 자격 증명을 넣지 않는다.
@@ -54,7 +68,7 @@ bash install.sh --no-plugins --no-chsh --no-launch
 - **Atuin**: Ctrl-R 히스토리 검색. 위쪽 방향키는 기본 탐색 유지. 로그인·동기화 설정은 하지 않는다.
 - **fzf 0.48 이상**: Ctrl-T 파일, Alt-C 디렉터리 선택. Atuin도 있으면 Ctrl-R은 Atuin이 담당한다.
 - **zoxide**: `z`/`zi`로 자주 쓰는 디렉터리 이동. 이전 zsh-z 데이터는 자동 변환하지 않는다.
-- **zsh-autosuggestions**: Homebrew의 `/opt/homebrew` 또는 `/usr/local` 설치 경로에 있으면 로드한다.
+- **zsh-autosuggestions**: 계정 전용 경로를 우선하며 기존 시스템 설치 경로도 읽을 수 있다.
 
 ## Bash 설정 상속
 
@@ -70,7 +84,7 @@ Bash 전용 문법이 들어간 복잡한 alias는 zsh용으로 직접 바꿔야
 
 ## 설치만 하면 쓰는 편의 기능
 
-`install.sh`가 두 플러그인을 설치한다. 이미 설치됐다면 재설치하지 않는다.
+`install.sh`가 두 플러그인을 홈 디렉터리에 설치한다. 계정 전용 복사본이 있으면 재설치하지 않는다.
 
 과거 명령의 나머지가 회색으로 보이며 줄 끝에서 `→`로 수락한다.
 구문 강조는 없는 명령과 입력 구문을 색으로 구분한다.
@@ -84,7 +98,8 @@ Bash 전용 문법이 들어간 복잡한 alias는 zsh용으로 직접 바꿔야
 `install.sh`는 Wave 설정을 자동 변경하지 않는다. 이 Mac에는 백업 후 이미 병합했다.
 Wave UI에서 바꾼 값이 저장소를 수정하지 않도록 실제 파일은 심볼릭 링크로 연결하지 않았다.
 
-- `/bin/zsh` 로그인 셸을 사용해 이 저장소의 설정을 읽는다.
+- 기본 프리셋은 macOS의 `/bin/zsh`를 사용한다. 계정 전용 빌드를 사용하려면
+  `term:localshellpath`를 `/Users/사용자명/.local/share/my-zsh/zsh-5.9.2/bin/zsh`로 지정한다.
 - 글꼴 14px, 스크롤백 20,000줄, 깜빡이지 않는 커서, 소리 없는 벨 표시.
 - Option을 Meta로 사용해 단어 단위 이동/삭제가 가능하다.
 - 선택 즉시 복사, 복사 시 줄 끝 공백 제거, bracketed paste 활성화.
@@ -114,7 +129,9 @@ zsh check.zsh
 검사는 새 설치, 공백 포함 ZDOTDIR, 기존 설정 보존, 중복 설치, 자동완성, Delete 키,
 설정 파일 자기 수정 방지, 깨진 심볼릭 링크와 잘못된 인수를 확인한다.
 자동 제안·구문 강조 로드, Wave 시작 경로, Bash 변수·alias 상속을 macOS에서 확인했다.
-누락된 zsh 설치 및 chsh 호출은 명령 대역으로 검사했으며 실제 Linux 패키지 설치는 수행하지 않았다. Wave 화면의 시각적 확인과 Linux 기동은 검증하지 않았다.
+관리자 명령을 실행하지 않는지와 계정 전용 실행기·플러그인 우선순위를 검사한다.
+macOS 임시 HOME에서 zsh 5.9.2 공식 소스의 실제 빌드·설치·자동완성·실행기 기동도 확인했다.
+Wave 화면의 시각적 확인과 Linux 기동은 검증하지 않았다.
 
 복구할 때는 설치 출력의 백업 경로를 사용한다. **아래 `BACKUP`은 실제 경로로 바꾼다.**
 

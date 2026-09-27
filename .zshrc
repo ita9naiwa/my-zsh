@@ -63,9 +63,9 @@
   # Keep Up-arrow navigation; Atuin owns Ctrl-R when both it and fzf exist.
   (( $+commands[atuin] )) && eval "$(atuin init zsh --disable-up-arrow)"
 
-  for prefix in /opt/homebrew /usr/local /usr; do
-    [[ -r $prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && {
-      source "$prefix/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  for prefix in "$HOME/.local/share/my-zsh/plugins" /opt/homebrew/share /usr/local/share /usr/share; do
+    [[ -r $prefix/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && {
+      source "$prefix/zsh-autosuggestions/zsh-autosuggestions.zsh"
       break
     }
   done
@@ -79,9 +79,9 @@
     bindkey -M "$map" '^[OB' history-beginning-search-forward
   done
   # Load highlighting after all widgets and key bindings.
-  for prefix in /opt/homebrew /usr/local /usr; do
-    [[ -r $prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && {
-      source "$prefix/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  for prefix in "$HOME/.local/share/my-zsh/plugins" /opt/homebrew/share /usr/local/share /usr/share; do
+    [[ -r $prefix/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && {
+      source "$prefix/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
       break
     }
   done
