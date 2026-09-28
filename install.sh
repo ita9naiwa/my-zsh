@@ -4,7 +4,7 @@
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 target_dir=${ZDOTDIR:-$HOME}
-preserve=1 launch=1 plugins=1 ai_cmd=0 build_zsh=0 shell_mode=auto
+preserve=1 launch=1 plugins=1 ai_cmd=0 build_zsh=0 shell_mode=auto vim_setup=1
 state_dir="$HOME/.local/share/my-zsh"
 for arg in "$@"; do
   case "$arg" in
@@ -15,6 +15,7 @@ for arg in "$@"; do
     --build-zsh) build_zsh=1 ;;
     --no-launch) launch=0 ;;
     --no-plugins) plugins=0 ;;
+    --no-vim) vim_setup=0 ;;
     --with-ai-cmd) ai_cmd=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
@@ -109,6 +110,13 @@ if [[ -e $launcher || -L $launcher ]]; then
   fi
 fi
 mv -f "$staging" "$launcher"
+if (( vim_setup )); then
+  if (( preserve )); then
+    bash "$repo_dir/install-vim.sh"
+  else
+    bash "$repo_dir/install-vim.sh" --no-preserve-current
+  fi
+fi
 bash "$repo_dir/setup-shell.sh" "$zsh_bin" "$shell_mode"
 echo 'Setup complete. Bash re-import is opt-in (MY_ZSH_IMPORT_BASH=1).'
 if (( launch )) && [[ -t 0 && -t 1 ]]; then

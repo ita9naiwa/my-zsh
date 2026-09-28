@@ -1,6 +1,6 @@
 # my-zsh
 
-macOS와 Linux에서 쓰는 작은 zsh 설정. zsh 5.9에서 검증했다.
+macOS와 Linux에서 쓰는 작은 zsh + Vim 설정. zsh 5.9에서 검증했다.
 프레임워크·서브모듈·폰트 설치 없이 자동완성, 공유 히스토리, Git 브랜치 프롬프트가 동작한다.
 
 ## 설치
@@ -50,6 +50,7 @@ bash install.sh --no-launch                   # 설치/자동 활성화 후 현�
 bash install.sh --no-chsh                     # sudo 시도 없이 Bash 자동 전환
 bash install.sh --no-shell-setup --no-launch  # 시작 파일/계정 셸 설정 변경 생략
 bash install.sh --no-plugins --no-launch      # 플러그인 다운로드 생략
+bash install.sh --no-vim --no-launch          # Vim 설정 설치 생략
 bash install.sh --build-zsh --no-launch       # 기존 zsh와 별개로 계정 전용 zsh 빌드
 ```
 
@@ -70,8 +71,10 @@ termcap/ncurses 개발 파일이 필요하다. 공식 소스의 고정 SHA-256�
 | `shortcut.sh` | IREE CPU 컴파일 단축 명령 |
 | `.zshrc.local.example` | Conda·Cloud SDK·개인 빌드 경로 예시 |
 | `install.sh` | 계정 전용 플러그인·설정·실행기 설치 |
+| `vimrc` / `install-vim.sh` | 기본 Vim 설정과 단독 설치기 |
 | `build-zsh.sh` | zsh가 없을 때 홈 디렉터리에 검증된 소스 빌드 |
 | `check.zsh` | 임시 HOME/ZDOTDIR에서 설치·기동 회귀 검사 |
+| `check-vim.sh` | 임시 HOME에서 Vim 설치·보존·실제 설정 검사 |
 
 개인 설정은 `${ZDOTDIR:-$HOME}/.zshrc.local`에 둔다. 저장소에 자격 증명을 넣지 않는다.
 기존 Mac의 `~/.config/zsh/terminal-keys.zsh`가 있으면 마지막에 읽어 방향키 설정을 유지한다.
@@ -142,6 +145,43 @@ Bash 전용 문법이 들어간 복잡한 alias는 zsh용으로 직접 바꿔야
 `ssh`처럼 명령 일부를 입력하고 `↑`/`↓`를 누르면 해당 접두어의 기록만 탐색한다.
 입력이 비어 있으면 전체 기록을 탐색한다. Shift/Ctrl/Option 방향키의 기존 이동 설정은 유지한다.
 
+## Vim
+
+`bash install.sh`가 Vim 설정도 함께 설치한다. Vim 실행 파일은 기존 것을 사용하며
+플러그인이나 추가 패키지는 설치하지 않는다. Vim 설정만 설치할 수도 있다.
+
+```sh
+bash install-vim.sh
+```
+
+`~/.vimrc`를 저장소의 `vimrc`에 연결한다. 내장 desert 색상, 줄 번호·현재 줄 표시,
+상태 표시줄, 문법 강조·파일별 들여쓰기, 검색 강조·스마트 대소문자 검색과 명령줄
+완성을 켠다. 기본 들여쓰기는 공백 4칸이며 파일별 설정이 우선한다.
+`i`로 입력, `Esc`로 일반 모드, `:w`로 저장, `:q`로 종료하고,
+`/검색어`와 `n`/`N`으로 검색한다. `Esc`를 두 번 누르면 검색 강조를 지운다.
+
+swap과 영구 undo는 작업 폴더 대신 `~/.vim/swap`, `~/.vim/undo`에 저장하고
+권한을 700으로 제한한다. 공유 작업 폴더의 swap 생성 지연을 피하면서 복구 기능을 유지한다.
+홈 자체가 네트워크 파일시스템이면 이 경로도 네트워크에 저장된다.
+
+기존 `.vimrc`와 변경되는 `.vimrc.local`은 `~/.my-vim-backup.*`에 백업한다.
+기존 Vim 설정은 기본적으로 `.vimrc.local`에서 이어 읽으며, 개인 설정이 마지막에 적용된다.
+이전 설정을 자동으로 이어 읽지 않으려면 `bash install-vim.sh --no-preserve-current`를 쓴다.
+통합 설치의 `--no-preserve-current`는 zsh와 Vim 모두에 적용된다.
+이미 존재하는 `.vimrc.local`은 이 옵션으로 삭제하지 않는다.
+
+복구 시 설치 출력의 실제 백업 경로에서 `.vimrc`를 복사한다.
+
+```sh
+VIM_BACKUP="$HOME/.my-vim-backup.실제접미사"
+[[ -L "$HOME/.vimrc" ]] && unlink "$HOME/.vimrc"
+cp -P "$VIM_BACKUP/.vimrc" "$HOME/.vimrc"
+```
+
+`.vimrc.local`에 추가된 `execute 'source' ...previous.vim...` 줄도 지운다.
+기존 `.vimrc.local` 백업이 있으면 그것으로 복원할 수 있다.
+처음부터 `.vimrc`가 없었다면 설치된 링크만 제거하면 된다.
+
 ## Wave Terminal
 
 `wave/settings.json`은 macOS용 추천 설정이다. 실제 설정 파일은
@@ -178,6 +218,7 @@ zsh check.zsh
 ```
 
 검사는 새 설치, 공백 포함 ZDOTDIR, 기존 설정 보존, 중복 설치, 자동완성, Delete 키,
+Vim 설정 로딩·백업·재설치·로컬 swap/undo 경로와 설치 생략 옵션,
 설정 파일 자기 수정 방지, 깨진 심볼릭 링크와 잘못된 인수를 확인한다.
 자동 제안·구문 강조 로드, Wave 시작 경로, Bash 변수·alias 상속을 macOS에서 확인했다.
 계정 전용 실행기·플러그인 우선순위, 비밀번호 없는 sudo 성공/거절/미설치,

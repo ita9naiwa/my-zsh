@@ -8,6 +8,7 @@ mkdir -p "$HOME" "$ZDOTDIR"
 print 'export MY_ZSH_PRESERVED=yes' > "$ZDOTDIR/.zshrc"
 print 'export MY_ZSH_LOCAL=yes' > "$ZDOTDIR/.zshrc.local"
 bash "$repo/install.sh" --no-shell-setup --no-launch --no-plugins --preserve-current
+[[ $(readlink "$HOME/.vimrc") == "$repo/vimrc" ]]
 first=$(cksum "$ZDOTDIR/.zshrc.local")
 bash "$repo/install.sh" --no-shell-setup --no-launch --no-plugins --preserve-current
 [[ $(cksum "$ZDOTDIR/.zshrc.local") == "$first" ]]
@@ -184,3 +185,6 @@ REPO="$repo" ZSH_AI_CMD_PROVIDER='' XDG_CONFIG_HOME="$tmp/ai-config" zsh -df -ic
   [[ $MY_AI_LOADED == yes && $MY_LOCAL_zsh_syntax_highlighting == yes ]] || exit 1
 '
 print 'PASS: AI plugin pinned install, idempotence, provider opt-in and plugin order'
+env HOME="$tmp/no-vim" ZDOTDIR="$tmp/no-vim" bash "$repo/install.sh" --no-vim --no-shell-setup --no-launch --no-plugins
+[[ ! -e $tmp/no-vim/.vimrc ]]
+bash "$repo/check-vim.sh"
