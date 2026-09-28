@@ -44,7 +44,7 @@
   add-zsh-hook precmd my_zsh_precmd
   setopt PROMPT_SUBST
   # Escape percent sequences in branch names before prompt expansion.
-  PROMPT='%F{cyan}%~%f${vcs_info_msg_0_//\%/%%}'$'\n''%(?.%F{green}.%F{red})%#%f '
+  PROMPT='%F{yellow}%m%f %F{cyan}%~%f${vcs_info_msg_0_//\%/%%}'$'\n''%(?.%F{green}.%F{red})%#%f '
 
   source "$repo_dir/shortcut.sh"
   # Load environments before optional tools so their executables are discoverable.
