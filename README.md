@@ -22,7 +22,7 @@ bash install.sh
 실패 상세는 `~/.local/share/my-zsh/shell-change.log`에 남긴다.
 
 - 설정: `${ZDOTDIR:-$HOME}/.zshrc` → 이 저장소의 설정 파일
-- 플러그인: `~/.local/share/my-zsh/plugins/` (공식 릴리스 태그 고정)
+- 플러그인: `~/.local/share/my-zsh/plugins/` (릴리스 태그 또는 커밋 고정)
 - 실행기: `~/.local/bin/my-zsh`
 - zsh가 없을 때: `~/.local/share/my-zsh/zsh-5.9.2/`에 소스 빌드
 - 빌드 임시 파일: `~/.cache/my-zsh/` (종료 시 정리)
@@ -84,6 +84,37 @@ termcap/ncurses 개발 파일이 필요하다. 공식 소스의 고정 SHA-256�
 - **fzf 0.48 이상**: Ctrl-T 파일, Alt-C 디렉터리 선택. Atuin도 있으면 Ctrl-R은 Atuin이 담당한다.
 - **zoxide**: `z`/`zi`로 자주 쓰는 디렉터리 이동. 이전 zsh-z 데이터는 자동 변환하지 않는다.
 - **zsh-autosuggestions**: 계정 전용 경로를 우선하며 기존 시스템 설치 경로도 읽을 수 있다.
+
+## 말로 명령어 만들기 (선택)
+
+```sh
+bash install.sh --with-ai-cmd --no-launch
+```
+
+[zsh-ai-cmd](https://github.com/kylesnowschwartz/zsh-ai-cmd)를 커밋
+`26d7b681bfd32ff31a56780593acbbfb839d5fd2`에 고정해 계정 전용 경로에 설치한다.
+`curl`과 `jq`가 필요하며 없으면 설명과 함께 중단한다. `--no-plugins`는 이 다운로드도 생략한다.
+기존 플러그인 복사본은 유지한다.
+
+`${XDG_CONFIG_HOME:-$HOME/.config}/my-zsh/ai-cmd.zsh`에 제공자를 명시해야 활성화된다.
+설정 파일이 없고 `ZSH_AI_CMD_PROVIDER`도 지정하지 않았으면 아무 AI에도 연결하지 않는다.
+로컬 OpenAI 호환 서버 예시 (LM Studio 앱 자체는 필요하지 않다):
+
+```zsh
+ZSH_AI_CMD_PROVIDER=lmstudio
+ZSH_AI_CMD_LMSTUDIO_HOST=127.0.0.1:8080
+ZSH_AI_CMD_LMSTUDIO_MODEL='서버에 로드한 모델 이름'
+```
+
+이 명령은 서버나 모델을 설치하지 않는다. 서버는 `/v1/chat/completions`와 플러그인이
+요구하는 구조화 JSON 응답을 지원해야 한다. 원격 머신의 `127.0.0.1`은 그 원격 머신이다.
+개인 API 키나 머신별 서버 주소는 저장소에 넣지 않는다.
+
+새 셸에서 한국어로 요청하고 **Ctrl-Z**를 누른 뒤 **Tab/→**로 제안을 채택한다.
+명령은 자동 실행하지 않는다. 내용을 확인하고 Enter로 실행한다.
+Ctrl-Z는 입력창에서 기존 suspend 대신 AI 요청에 사용된다.
+보내는 내용에는 입력 요청과 운영체제·설치 도구 정보가 포함되므로 클라우드 제공자는 직접 선택한다.
+비활성화하려면 제공자 설정을 지우고 새 셸을 연다.
 
 ## Bash 설정 상속
 

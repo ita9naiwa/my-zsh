@@ -78,6 +78,12 @@
     bindkey -M "$map" '^[[B' history-beginning-search-forward
     bindkey -M "$map" '^[OB' history-beginning-search-forward
   done
+  # AI commands are opt-in: never silently select the upstream cloud default.
+  local ai_config=${XDG_CONFIG_HOME:-$HOME/.config}/my-zsh/ai-cmd.zsh
+  [[ -r $ai_config ]] && source "$ai_config"
+  if [[ -n ${ZSH_AI_CMD_PROVIDER:-} && -r $HOME/.local/share/my-zsh/plugins/zsh-ai-cmd/zsh-ai-cmd.plugin.zsh ]] && (( $+commands[curl] && $+commands[jq] )); then
+    source "$HOME/.local/share/my-zsh/plugins/zsh-ai-cmd/zsh-ai-cmd.plugin.zsh"
+  fi
   # Load highlighting after all widgets and key bindings.
   for prefix in "$HOME/.local/share/my-zsh/plugins" /opt/homebrew/share /usr/local/share /usr/share; do
     [[ -r $prefix/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && {

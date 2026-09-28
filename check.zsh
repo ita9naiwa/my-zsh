@@ -152,3 +152,35 @@ HOME="$tmp/no-sudo" PATH="$activation_bin" bash "$repo/setup-shell.sh" /bin/zsh 
 HOME="$activation_home" bash -c 'source "$HOME/.bashrc"; [[ $EXISTING_VALUE == kept ]]; echo JOB_SURVIVED' > "$tmp/job.out"
 [[ $(<"$tmp/job.out") == JOB_SURVIVED ]] || exit 1
 print 'PASS: no-password sudo/failure/missing, unlisted shell, fallback idempotence, batch guard'
+
+# AI download is pinned, repeatable, and loading requires an explicit provider.
+ai_bin="$tmp/ai-bin"
+mkdir -p "$ai_bin"
+cat > "$ai_bin/git" <<'SH'
+#!/bin/bash
+printf '%s\n' "$*" >> "$TEST_AI_LOG"
+if [[ $1 == -C && $* == *checkout* ]]; then
+  cat > "$2/zsh-ai-cmd.plugin.zsh" <<'ZSH'
+[[ $MY_LOCAL_zsh_autosuggestions == yes ]] || return 1
+[[ -z ${MY_LOCAL_zsh_syntax_highlighting:-} ]] || return 1
+typeset -g MY_AI_LOADED=yes
+ZSH
+fi
+SH
+chmod +x "$ai_bin/git"
+TEST_AI_LOG="$tmp/ai.log" PATH="$ai_bin:$PATH" bash "$repo/install.sh" --with-ai-cmd --no-shell-setup --no-launch
+[[ $(<"$tmp/ai.log") == *26d7b681bfd32ff31a56780593acbbfb839d5fd2* ]] || exit 1
+first=$(cksum "$tmp/ai.log")
+TEST_AI_LOG="$tmp/ai.log" PATH="$ai_bin:$PATH" bash "$repo/install.sh" --with-ai-cmd --no-shell-setup --no-launch
+[[ $(cksum "$tmp/ai.log") == "$first" ]] || exit 1
+REPO="$repo" ZSH_AI_CMD_PROVIDER='' XDG_CONFIG_HOME="$tmp/no-ai-config" zsh -df -ic '
+  source "$REPO/.zshrc"
+  [[ -z ${MY_AI_LOADED:-} ]] || exit 1
+'
+mkdir -p "$tmp/ai-config/my-zsh"
+print 'ZSH_AI_CMD_PROVIDER=lmstudio' > "$tmp/ai-config/my-zsh/ai-cmd.zsh"
+REPO="$repo" ZSH_AI_CMD_PROVIDER='' XDG_CONFIG_HOME="$tmp/ai-config" zsh -df -ic '
+  source "$REPO/.zshrc"
+  [[ $MY_AI_LOADED == yes && $MY_LOCAL_zsh_syntax_highlighting == yes ]] || exit 1
+'
+print 'PASS: AI plugin pinned install, idempotence, provider opt-in and plugin order'

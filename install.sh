@@ -4,7 +4,7 @@
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 target_dir=${ZDOTDIR:-$HOME}
-preserve=1 launch=1 plugins=1 build_zsh=0 shell_mode=auto
+preserve=1 launch=1 plugins=1 ai_cmd=0 build_zsh=0 shell_mode=auto
 state_dir="$HOME/.local/share/my-zsh"
 for arg in "$@"; do
   case "$arg" in
@@ -15,6 +15,7 @@ for arg in "$@"; do
     --build-zsh) build_zsh=1 ;;
     --no-launch) launch=0 ;;
     --no-plugins) plugins=0 ;;
+    --with-ai-cmd) ai_cmd=1 ;;
     *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
@@ -44,6 +45,26 @@ if (( plugins )); then
       mv "$staging" "$dest"
     fi
   done
+fi
+if (( plugins && ai_cmd )); then
+  for tool in curl jq; do
+    command -v "$tool" >/dev/null || { echo "zsh-ai-cmd requires $tool; install it for your account first." >&2; exit 1; }
+  done
+  dest="$state_dir/plugins/zsh-ai-cmd"
+  if [[ ! -r $dest/zsh-ai-cmd.plugin.zsh ]]; then
+    [[ ! -e $dest ]] || { echo "Incomplete plugin directory: $dest" >&2; exit 1; }
+    staging=$(mktemp -d "$state_dir/plugins/.download.XXXXXXXX")
+    if ! (
+      git init -q "$staging" &&
+      git -C "$staging" fetch -q --depth 1 https://github.com/kylesnowschwartz/zsh-ai-cmd.git 26d7b681bfd32ff31a56780593acbbfb839d5fd2 &&
+      git -C "$staging" -c advice.detachedHead=false checkout -q --detach FETCH_HEAD
+    ); then
+      rm -rf -- "$staging"
+      exit 1
+    fi
+    mv "$staging" "$dest"
+  fi
+  echo 'zsh-ai-cmd installed. Choose a provider in ~/.config/my-zsh/ai-cmd.zsh to enable it.'
 fi
 mkdir -p "$target_dir"
 rc="$target_dir/.zshrc"
